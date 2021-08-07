@@ -62,4 +62,5 @@ def generate_apis(request):
 
 ```
 Menshikov Valeriy
+valeriy.menshikov.1989@gmail.com
 ```
