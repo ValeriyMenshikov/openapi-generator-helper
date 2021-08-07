@@ -1,0 +1,1 @@
+recursive-include openapi_generator_helper/python_templates *.mustache *.py

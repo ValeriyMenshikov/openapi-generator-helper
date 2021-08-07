@@ -1,0 +1,9 @@
+include:
+  - project: 'pub/ci'
+    ref: '0.0.5'
+    file: '/.pypi-nexus.gitlab-ci.yml'
+image: gitlab-registry.ozon.ru/qa/core/ozpy
+stages:
+  - deploy
+deploy:
+  stage: deploy

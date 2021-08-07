@@ -1,0 +1,18 @@
+include:
+  - project: 'pub/ci'
+    ref: '0.0.5'
+    file: '/.pypi-nexus.gitlab-ci.yml'
+
+.deploy package:
+  extends: [deploy]
+  before_script:
+    - cd "$CI_JOB_NAME"
+  only:
+    - tags
+  when: on_success
+
+openapi_generator_helper:
+  extends: .deploy package
+  only:
+    changes:
+      - "openapi_generator_helper/setup.py"
