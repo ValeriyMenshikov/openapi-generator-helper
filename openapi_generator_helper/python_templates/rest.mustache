@@ -5,11 +5,12 @@ import json
 import logging
 import re
 import ssl
+import inspect
 import urllib3
 from urllib.parse import urlencode
 from copy import deepcopy
 
-from {{packageName}}.exceptions import ApiException, UnauthorizedException, ForbiddenException, NotFoundException, ServiceException, ApiValueError
+from {{packageName}}.exceptions import ApiException, UnauthorizedException, ForbiddenException, NotFoundException, ServiceException, ApiValueError, OpenApiException
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ def struct_log(fn):
         options = deepcopy(kwargs)
         for arg in args:
             if not isinstance(arg, RESTClientObject):
-                if arg in ['POST', 'PUT', 'PATCH', 'OPTIONS', 'DELETE']:
+                if arg in ['POST', 'PUT', 'PATCH', 'OPTIONS', 'DELETE', 'GET', 'HEAD']:
                     options["method"] = arg
                 elif "http" in arg:
                     options["url"] = arg
@@ -83,10 +84,11 @@ def struct_log(fn):
         curl = ' '.join(flat_parts)
         print('\n', curl)
         if log_on:
-            log = structlog.get_logger().bind(service=service_name)
+            log = structlog.get_logger().bind(service='api')
             log.msg(
                 'request',
                 curl=curl,
+                caller=inspect.stack()[2][3],
                 method=options.get("method"),
                 handler=handler,
                 url=options.get("url", None),
@@ -95,14 +97,25 @@ def struct_log(fn):
                 data=kwargs.get('data', None),
                 headers=kwargs.get('headers', None)
             )
-            response = fn(*args, **kwargs)
-            data = json.loads(response.data) if response.data else None
-            log.msg(
-                'response',
-                status_code=response.status,
-                json=data,
-                curl=curl,
-            )
+            try:
+                response = fn(*args, **kwargs)
+            except (OpenApiException, ApiException) as error:
+                log.msg(
+                    'response',
+                    status_code=error.status,
+                    json=json.loads(error.body) if error.body and '<html>' not in str(error.body) else error.body,
+                    message=error.reason,
+                    curl=curl
+                )
+                raise error
+            else:
+                data = json.loads(response.data) if response.data else None
+                log.msg(
+                    'response',
+                    status_code=response.status,
+                    json=data,
+                    curl=curl,
+                )
         else:
             response = fn(*args, **kwargs)
         return response
